@@ -46,3 +46,22 @@ print(deltas)
 #
 # Neither the input nor any of the examples had any "2" in the delta list, only "3", so
 # I'm not sure how a 2 would work out...
+#
+# Wait, I see what's going on here.
+# So if the delta between two positions is a 3, then that adapter *must* be in the
+# chain. So the only possible variance is when the adapter is a 1.
+# But if it's 3 1 3... well, you need that 1 in there or the two 3's will be too
+# far apart.
+#
+# So it's a run of >1 1's that's relevant here.
+# And for whatever reason, none of the provided inputs have runs of more than 4 1's,
+# or any 2's.
+#
+# So by "default", if a 1-adapter can be either present or absent, then it's
+# like a bit in a binary number, and the number of possibilities is 2^n where
+# n is the number of 1's that are part of a run-of-length-2+. However!
+# When you have a run of *4* 1's... you can't have all *4* of them absent
+# or the adapters before and after them will be too far apart in voltage!
+# And note that 2**4 - 1 = 7... so that's why it's 7**a and not 8**a,
+# because the at least one of them has to be left in which eliminates
+# one of the possible variations for that run.
