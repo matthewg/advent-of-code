@@ -65,3 +65,6 @@ print(deltas)
 # And note that 2**4 - 1 = 7... so that's why it's 7**a and not 8**a,
 # because the at least one of them has to be left in which eliminates
 # one of the possible variations for that run.
+#
+# (I never bothered coding this up, I just counted and calculated by hand from the 'deltas'
+# list since I was trying to figure out the pattern as I went.)
