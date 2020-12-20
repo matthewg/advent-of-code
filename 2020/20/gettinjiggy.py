@@ -29,16 +29,28 @@ class Tile:
         self.width = len(self.data)
         self.height = len(self.data[0])
 
-        print('Tile %d' % self.name)
-        for row in self.data:
-            print(row)
+        #print('Tile %d' % self.name)
+        #for row in self.data:
+        #    print(row)
         
         self.orientations = [
-            self._GetTransformedTile(flipX=flipX, flipY=flipY, rotateCW=rotateCW)
-            for (flipX, flipY, rotateCW) in itertools.product((False, True), (False, True), (0, 1, 2, 3))
+            self._GetTransformedTile(flip=flip, rotateCW=rotateCW)
+            for (flip, rotateCW) in itertools.product((0, 1, 2), (0, 1, 2, 3))
         ]
 
-    def _GetTransformedTile(self, flipX=False, flipY=False, rotateCW=0):
+    def _GetTransformedTile(self, flip, rotateCW):
+        if flip == 0:
+            flipX = False
+            flipY = False
+        elif flip == 1:
+            flipX = True
+            flipY = False
+        elif flip == 2:
+            flipX = False
+            flipY = True
+        else:
+            raise Exception('Unsupported flip: %r' % flip)
+            
         data = self.data[:]
         if flipX:
             data = [''.join([c for c in reversed(row)])
@@ -56,9 +68,9 @@ class Tile:
                     newdata[newY][newX] = data[y][x]
             data = [''.join(row) for row in newdata]
 
-        print('===== Orient (flipX=%r, flipY=%r, rotateCW=%d) =====' % (flipX, flipY, rotateCW))
-        for row in data:
-            print(row)
+        #print('===== Orient (flipX=%r, flipY=%r, rotateCW=%d) =====' % (flipX, flipY, rotateCW))
+        #for row in data:
+        #    print(row)
         return Orientation(
             data,
             [
@@ -88,6 +100,7 @@ class State:
         self.lastY = -1
         self.lastTile = None
         self.lastODesc = None
+        self.lastDir = None
 
     def __lt__(self, other):
         return len(self.unplacedTiles) < len(other.unplacedTiles)
@@ -108,7 +121,7 @@ class State:
         self.tileOrientations = dict(other.tileOrientations)
         return self
 
-    def PlaceTile(self, tile, orientation, x, y):
+    def PlaceTile(self, tile, orientation, x, y, direction):
         if tile not in self.unplacedTiles:
             raise Exception('Tile already placed')
         self.arrangement[x][y] = tile
@@ -118,11 +131,12 @@ class State:
         self.lastY = y
         self.lastTile = tile
         self.lastOrientation = orientation
+        self.lastDir = direction
 
 
 def PrintFoo(state, cameFrom, depth=0):
     depthStr = ' ' * (depth*2)
-    if not state.lastTile:
+    if not state or not state.lastTile:
         print('%sInitial state' % depthStr)
         return
 
@@ -169,7 +183,27 @@ def FindNeighbors(x, y, gridSize):
     return ret
 
 
-def Arrange(tiles):
+def FindEdgeCandidates(edge, tiles):
+    edgeOptions = collections.defaultdict(lambda: collections.defaultdict(list))
+    for tile in tiles:
+        for orientation in tile.orientations:
+            edgeOptions[orientation.borders[edge]][tile].append(orientation)
+    #print('Potential edge candidates for %d:' % edge)
+    #for (border, options) in edgeOptions.items():
+    #    print('  %r:' % border)
+    #    for (tile, orientation) in options:
+    #        print('    %d in %r' % (tile.name, orientation.oDesc))
+
+    optionsForEdge = collections.defaultdict(list)
+    for (border, tiles) in edgeOptions.items():
+        if len(tiles) > 1:
+            continue
+        for (tile, orientations) in tiles.items():
+            optionsForEdge[tile].extend(orientations)
+    return (edge, optionsForEdge)
+
+
+def Arrange(tiles, edgeCandidates, cornerCandidates):
     random.shuffle(tiles)
     gridsize = math.sqrt(len(tiles))
     if gridsize != int(gridsize):
@@ -181,10 +215,10 @@ def Arrange(tiles):
 
     cameFrom = {}
     openSet = []
-    for initialTile in tiles:
-        for initialOrientation in initialTile.orientations:
+    for (initialTile, initialOrientations) in cornerCandidates.items():
+        for initialOrientation in initialOrientations:
             state = State.CopyState(initialState)
-            state.PlaceTile(initialTile, initialOrientation, 0, 0)
+            state.PlaceTile(initialTile, initialOrientation, 0, 0, (1, 0))
             heapq.heappush(openSet, state)
             cameFrom[state] = initialState
 
@@ -195,54 +229,138 @@ def Arrange(tiles):
         if step % 100 == 0:
             print('Step %d: Remaining tiles: %d (%d possibilities)' % (step, len(state.unplacedTiles), len(openSet)))
         step += 1
-        #print('This state: placed %d at %d,%d in %r' % (state.lastTile.name, state.lastX, state.lastY, state.lastODesc))
+        #print('This state: placed %d at %d,%d in %r' % (state.lastTile.name, state.lastX, state.lastY, state.lastOrientation.oDesc))
+        #PrintFoo(state, cameFrom)
         if not state.unplacedTiles:
             return (state.arrangement, state, cameFrom)
 
-        for x in range(gridsize):
-            for y in range(gridsize):
-                if not state.arrangement[x][y]:
+        lastX = state.lastX
+        lastY = state.lastY
+        lastDir = state.lastDir
+        nextDir = lastDir
+
+        # Place in a clockwise spiral so that we get the edges first
+        #print('Looking for next placement from %d,%d : %r' % (lastX, lastY, lastDir))
+        while True:
+            nX = lastX + nextDir[0]
+            nY = lastY + nextDir[1]
+            #print('Trying (%d,%d)' % nextDir)
+            if (nX + 1) > gridsize:
+                #print('Would fall off right')
+                pass
+            elif (nY + 1) > gridsize:
+                #print('Would fall off bottom')
+                pass
+            elif nX < 0:
+                #print('Would fall off left')
+                pass
+            elif nY < 0:
+                #print('Would fall off top')
+                pass
+            elif state.arrangement[nX][nY]:
+                #print('Occupied')
+                pass
+            else:
+                break
+            
+            if nextDir == (1, 0):
+                nextDir = (0, 1)
+            elif nextDir == (0, 1):
+                nextDir = (-1, 0)
+            elif nextDir == (-1, 0):
+                nextDir = (0, -1)
+            elif nextDir == (0, -1):
+                nextDir = (1, 0)
+
+            if lastDir == nextDir:
+                raise Exception('Did not find valid next tile, but unplaced tiles remain')
+
+        onEdges = []
+        if nX == 0:
+            onEdges.append(Border.LEFT)
+        elif (nX+1) >= gridsize:
+            onEdges.append(Border.RIGHT)
+
+        if nY == 0:
+            onEdges.append(Border.TOP)
+        elif (nY+1) >= gridsize:
+            onEdges.append(Border.BOTTOM)
+    
+        #print('Found an open neighbor for (%d, %d) => (%d, %d)' % (lastX, lastY, nX, nY))
+        for nTile in state.unplacedTiles:
+
+            # Place corner candidates in corners, and don't place them anywhere else
+            isCornerCandidate = nTile in cornerCandidates
+            if len(onEdges) < 2 and isCornerCandidate:
+                #print('Rejecting placement of %d at %d,%d because reserving it for corners' % (nTile.name, nX, nY))
+                continue
+            elif len(onEdges) == 2 and not isCornerCandidate:
+                #print('Rejecting placement of %d at %d,%d because need corner candidate' % (nTile.name, nX, nY))
+                continue
+            
+            for nTileOrientation in nTile.orientations:
+                matchesEdgeCandidates = True
+
+                for edge in onEdges:
+                    if nTile not in edgeCandidates[edge] or nTileOrientation not in edgeCandidates[edge][nTile]:
+                        matchesEdgeCandidates = False
+                        break
+                if not matchesEdgeCandidates:
+                    #print('Rejecting placement of %d in %r at %d,%d due to edge candidates %r' % (nTile.name, nTileOrientation.oDesc, nX, nY, onEdges))
                     continue
 
-                for neighborData in FindNeighbors(x, y, gridsize):
-                    nX = neighborData[0]
-                    nY = neighborData[1]
-                    if state.arrangement[nX][nY]:
+                fitsExistingNeighbors = True
+                for (existingX, existingY, nTileBorder, existingBorder) in FindNeighbors(nX, nY, gridsize):
+                    existingTile = state.arrangement[existingX][existingY]
+                    if not existingTile:
                         continue
-
-                    #print('Found an open neighbor for (%d, %d) => (%d, %d)' % (x, y, nX, nY))
-                    foundOpenNeighbor = True
-                    for nTile in state.unplacedTiles:
-                        for nTileOrientation in nTile.orientations:
-                            fitsExistingNeighbors = True
-                            for (existingX, existingY, nTileBorder, existingBorder) in FindNeighbors(nX, nY, gridsize):
-                                existingTile = state.arrangement[existingX][existingY]
-                                if not existingTile:
-                                    continue
-                                existingOrientation = state.tileOrientations[existingTile]
-                                if nTileOrientation.borders[nTileBorder] != existingOrientation.borders[existingBorder]:
-                                    #print('Rejecting placement of %d at %d,%d with %r due to neighbor %d,%d: %r != %r' % (
-                                    #    nTile.name, nX, nY, oDesc, existingX, existingY, nTileOrientation[nTileBorder], existingOrientation[existingBorder]))
-                                    fitsExistingNeighbors = False
-                                    break
-                            if not fitsExistingNeighbors:
-                                continue
-                            nextState = State.CopyState(state)
-                            nextState.PlaceTile(nTile, nTileOrientation, nX, nY)
-                            cameFrom[nextState] = state
-                            #PrintFoo(nextState, cameFrom)
-                            heapq.heappush(openSet, nextState)
+                    existingOrientation = state.tileOrientations[existingTile]
+                    if nTileOrientation.borders[nTileBorder] != existingOrientation.borders[existingBorder]:
+                        #print('Rejecting placement of %d at %d,%d with %r due to neighbor %d,%d' % (
+                        #    nTile.name, nX, nY, nTileOrientation.oDesc, existingX, existingY))
+                        fitsExistingNeighbors = False
+                        break
+                if not fitsExistingNeighbors:
+                    continue
+                #print('Ok to place %d at %d,%d with %r' % (nTile.name, nX, nY, nTileOrientation.oDesc))
+                nextState = State.CopyState(state)
+                nextState.PlaceTile(nTile, nTileOrientation, nX, nY, nextDir)
+                cameFrom[nextState] = state
+                #PrintFoo(nextState, cameFrom)
+                heapq.heappush(openSet, nextState)
     raise Exception('Did not find a valid arrangement')
 
 
 state = {'tiles': []}
 utils.call_for_records(ParseTile, state)
-(arrangement, state, cameFrom) = Arrange(state['tiles'])
+
+edgeCandidates = dict(FindEdgeCandidates(edge, state['tiles'])
+                      for edge in (Border.TOP, Border.RIGHT, Border.BOTTOM, Border.LEFT))
+for edge in (Border.TOP, Border.RIGHT, Border.BOTTOM, Border.LEFT):
+    print('Found edge candidates for %r:' % edge)
+    for (tile, orientations) in edgeCandidates[edge].items():
+        for orientation in orientations:
+            print('  Tile %d in orientation %r' % (tile.name, orientation.oDesc))
+cornerCandidates = collections.defaultdict(list)
+corner = (Border.TOP, Border.LEFT)
+print('Found candidates for corner:')
+for (tile, orientations) in edgeCandidates[corner[0]].items():
+    for orientation in orientations:
+        if tile in edgeCandidates[corner[1]] and orientation in edgeCandidates[corner[1]][tile]:
+            cornerCandidates[tile].append(orientation)
+            print('  Tile %d in orientation %r' % (tile.name, orientation.oDesc))
+part1Answer = 1
+for cornerTile in cornerCandidates.keys():
+    part1Answer *= cornerTile.name
+print('Part 1 answer: %d' % part1Answer)
+
+(arrangement, state, cameFrom) = Arrange(state['tiles'], edgeCandidates, cornerCandidates)
+PrintFoo(state, cameFrom)
+
 #while state:
 #    if state.lastTile:
 #        #print('Placed %d at %d,%d with orientation %s' % (state.lastTile.name, state.lastX, state.lastY, state.lastODesc))
 #        state = cameFrom[state]
 #    else:
 #        state = None
-PrintFoo(state, cameFrom)
-print(arrangement[0][0].name * arrangement[0][-1].name * arrangement[-1][0].name * arrangement[-1][-1].name)
+#PrintFoo(state, cameFrom)
