@@ -10,7 +10,11 @@ def call_for_records(fn, state):
     lines = []
     while True:
         line = sys.stdin.readline()
-        if line == '':
-            fn(lines, state)
-            return
-        lines.append(line.replace('\n', ''))
+        if line == '\n' or not line:
+            if lines:
+                fn(lines, state)
+                lines = []
+            if not line:
+                break
+        else:
+            lines.append(line.replace('\n', ''))
