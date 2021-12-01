@@ -2,8 +2,10 @@ import sys
 
 
 def call_for_lines(fn, state):
+    line_idx = 0
     for line in sys.stdin.readlines():
-        fn(line.replace('\n', ''), state)
+        fn(line.replace('\n', ''), state, line_idx)
+        line_idx += 1
 
 
 def call_for_records(fn, state):
