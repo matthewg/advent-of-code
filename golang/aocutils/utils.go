@@ -27,17 +27,17 @@ func (g *Grid[T]) ColLen() int {
 	return len((*g)[0])
 }
 
-func GridNeighbors[T GridCell](g *Grid[T], cell T) []T {
+func GridNeighbors[T GridCell](g *Grid[T], cell T, diagonals bool) []T {
 	var neighbors []T
 	r := cell.Row()
 	c := cell.Col()
-	if r > 1 && c > 1 {
+	if diagonals && r > 1 && c > 1 {
 		neighbors = append(neighbors, g.Cell(r-1, c-1))
 	}
 	if r > 1 {
 		neighbors = append(neighbors, g.Cell(r-1, c))
 	}
-	if r > 1 && c < g.ColLen() {
+	if diagonals && r > 1 && c < g.ColLen() {
 		neighbors = append(neighbors, g.Cell(r-1, c+1))
 	}
 	if c > 1 {
@@ -46,19 +46,19 @@ func GridNeighbors[T GridCell](g *Grid[T], cell T) []T {
 	if c < g.ColLen() {
 		neighbors = append(neighbors, g.Cell(r, c+1))
 	}
-	if r < g.RowLen() && c > 1 {
+	if diagonals && r < g.RowLen() && c > 1 {
 		neighbors = append(neighbors, g.Cell(r+1, c-1))
 	}
 	if r < g.RowLen() {
 		neighbors = append(neighbors, g.Cell(r+1, c))
 	}
-	if r < g.RowLen() && c < g.ColLen() {
+	if diagonals && r < g.RowLen() && c < g.ColLen() {
 		neighbors = append(neighbors, g.Cell(r+1, c+1))
 	}
 	return neighbors
 }
 
-func LoadGrid[T GridCell](path string, convFn func(byte) T, g *Grid[T]) {
+func LoadGrid[T GridCell](path string, convFn func(byte, int, int) T, g *Grid[T]) {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -66,14 +66,16 @@ func LoadGrid[T GridCell](path string, convFn func(byte) T, g *Grid[T]) {
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
+	rowNumber := 0
 	for {
 		var row []T
 		line, err := reader.ReadString('\n')
 		if err == nil {
+			rowNumber += 1
 			line = strings.TrimSuffix(line, "\n")
 			for i := 0; i < len(line); i++ {
 				char := line[i]
-				convChar := convFn(char)
+				convChar := convFn(char, rowNumber, i+1)
 				row = append(row, convChar)
 			}
 		} else if err == io.EOF {
