@@ -3,6 +3,7 @@ package aocutils
 import (
 	"bufio"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -108,4 +109,19 @@ func Lines[T any](path string, convFn func(string) T) []T {
 			log.Fatalf("Error reading %v: %v", path, err)
 		}
 	}
+}
+
+func Records[T any](path, separator string, convFn func(string) T) []T {
+	bs, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := string(bs)
+	rs := strings.Split(s, separator)
+	var records []T
+	for i := 0; i < len(rs); i++ {
+		records = append(records, convFn(rs[i]))
+	}
+	return records
 }

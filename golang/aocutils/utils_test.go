@@ -107,3 +107,20 @@ func TestLines(t *testing.T) {
 		t.Fatalf("lines[3]: %v", lines)
 	}
 }
+
+func RecordsConv(s string) string {
+	return s
+}
+
+func TestRecords(t *testing.T) {
+	records := Records("test2", "---\n", RecordsConv)
+	if len(records) != 2 {
+		t.Fatalf("records have wrong len: %v", records)
+	}
+	if records[0] != "abc\ndef\n" {
+		t.Fatalf("records[0]: %v", records)
+	}
+	if records[1] != "ghi\njkl\n" {
+		t.Fatalf("records[1]: %v", records)
+	}
+}
