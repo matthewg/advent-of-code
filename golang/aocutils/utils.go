@@ -15,7 +15,7 @@ type GridCell interface {
 
 type Grid[T GridCell] [][]T
 
-func (g *Grid[t]) Cell(row, col int) T {
+func (g *Grid[T]) Cell(row, col int) T {
 	return (*g)[row-1][col-1]
 }
 
