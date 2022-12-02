@@ -100,8 +100,8 @@ func Lines[T any](path string, convFn func(string) T) []T {
 	for {
 		line, err := reader.ReadString('\n')
 		line = strings.TrimSuffix(line, "\n")
-		convLine := convFn(line)
 		if err == nil {
+			convLine := convFn(line)
 			lines = append(lines, convLine)
 		} else if err == io.EOF {
 			return lines
