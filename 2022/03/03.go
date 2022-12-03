@@ -44,8 +44,7 @@ func main() {
 
 	// part 1
 	sharedPrios := 0
-	for i := 0; i < len(rucksacks); i++ {
-		rucksack := rucksacks[i]
+	for _, rucksack := range rucksacks {
 		shared := rucksack.Comp1.Intersection(rucksack.Comp2)
 		shared.Do(func(x interface{}) {
 			sharedPrios += Priority(x.(rune))

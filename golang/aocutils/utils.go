@@ -59,7 +59,7 @@ func GridNeighbors[T GridCell](g *Grid[T], cell T, diagonals bool) []T {
 	return neighbors
 }
 
-func LoadGrid[T GridCell](path string, convFn func(byte, int, int) T, g *Grid[T]) {
+func LoadGrid[T GridCell](path string, convFn func(rune, int, int) T, g *Grid[T]) {
 	file, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
@@ -74,9 +74,8 @@ func LoadGrid[T GridCell](path string, convFn func(byte, int, int) T, g *Grid[T]
 		if err == nil {
 			rowNumber += 1
 			line = strings.TrimSuffix(line, "\n")
-			for i := 0; i < len(line); i++ {
-				char := line[i]
-				convChar := convFn(char, rowNumber, i+1)
+			for i, c := range line {
+				convChar := convFn(c, rowNumber, i+1)
 				row = append(row, convChar)
 			}
 		} else if err == io.EOF {

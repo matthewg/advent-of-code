@@ -159,8 +159,7 @@ func main() {
 	movePairs := aocutils.Lines(os.Args[1], LineToMovePairs)
 	totalScore1 := 0
 	totalScore2 := 0
-	for i := 0; i < len(movePairs); i++ {
-		movePair := movePairs[i]
+	for _, movePair := range movePairs {
 		totalScore1 += movePair.I.Score()
 		totalScore2 += movePair.II.To1().Score()
 	}

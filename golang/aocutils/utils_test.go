@@ -15,8 +15,8 @@ func (c TestCell) Col() int {
 	return c.C
 }
 
-func GridConv(b byte, row, col int) TestCell {
-	return TestCell{row, col, rune(b)}
+func GridConv(r rune, row, col int) TestCell {
+	return TestCell{row, col, r}
 }
 
 func TestGrid(t *testing.T) {

@@ -30,13 +30,13 @@ func ParseElf(s string) Elf {
 	fs := strings.Split(s, "\n")
 	var e Elf
 	ef := &e.F
-	for i := 0; i < len(fs); i++ {
-		if fs[i] == "" {
+	for _, f := range fs {
+		if f == "" {
 			continue
 		}
-		c, err := strconv.Atoi(fs[i])
+		c, err := strconv.Atoi(f)
 		if err != nil {
-			log.Fatalf("Error converting calorie count to string: %v -> %v", fs[i], err)
+			log.Fatalf("Error converting calorie count to string: %v -> %v", f, err)
 		}
 		cCal := Calories(c)
 		(*ef) = append(*ef, Food{cCal})
