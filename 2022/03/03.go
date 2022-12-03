@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/golang-collections/collections/set"
 	"github.com/matthewg/advent-of-code/golang/aocutils"
 )
 
@@ -15,40 +16,53 @@ func Priority(i rune) int {
 	}
 }
 
-type Empty struct{}
 type Rucksack struct {
-	Comp1  []rune
-	Comp2  []rune
-	Shared map[rune]Empty
+	Comp1 *set.Set
+	Comp2 *set.Set
+}
+
+func (r Rucksack) Items() *set.Set {
+	return r.Comp1.Union(r.Comp2)
 }
 
 func LineToRucksack(s string) Rucksack {
-	var r Rucksack
-	r.Shared = make(map[rune]Empty)
-	c1 := make(map[rune]Empty)
+	r := Rucksack{set.New(), set.New()}
+	add := func(s *set.Set, b byte) {
+		s.Insert(rune(b))
+	}
 	for i := 0; i < len(s)/2; i++ {
-		x := rune(s[i])
-		r.Comp1 = append(r.Comp1, x)
-		c1[x] = Empty{}
+		add(r.Comp1, s[i])
 	}
 	for i := len(s) / 2; i < len(s); i++ {
-		x := rune(s[i])
-		r.Comp2 = append(r.Comp2, x)
-		if _, ok := c1[x]; ok {
-			r.Shared[x] = Empty{}
-		}
+		add(r.Comp2, s[i])
 	}
 	return r
 }
 
 func main() {
 	rucksacks := aocutils.Lines(os.Args[1], LineToRucksack)
+
+	// part 1
 	sharedPrios := 0
 	for i := 0; i < len(rucksacks); i++ {
 		rucksack := rucksacks[i]
-		for x := range rucksack.Shared {
-			sharedPrios += Priority(x)
-		}
+		shared := rucksack.Comp1.Intersection(rucksack.Comp2)
+		shared.Do(func(x interface{}) {
+			sharedPrios += Priority(x.(rune))
+		})
 	}
-	fmt.Printf("priority total: %v\n", sharedPrios)
+	fmt.Printf("per-rucksack shared item priority total: %v\n", sharedPrios)
+
+	// part 2
+	groupPrios := 0
+	for i := 0; i < len(rucksacks); i += 3 {
+		r1 := rucksacks[i].Items()
+		r2 := rucksacks[i+1].Items()
+		r3 := rucksacks[i+2].Items()
+		shared := r1.Intersection(r2).Intersection(r3)
+		shared.Do(func(x interface{}) {
+			groupPrios += Priority(x.(rune))
+		})
+	}
+	fmt.Printf("group-shared item priority total: %v\n", groupPrios)
 }
