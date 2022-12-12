@@ -2,22 +2,139 @@ package aocutils
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"strings"
+
+	"github.com/oleiade/lane/v2"
 )
+
+type Node[T interface{}] struct {
+	Edges []Edge[T]
+	Data  T
+}
+
+type Edge[T interface{}] struct {
+	Weight      int
+	Destination *Node[T]
+}
+
+func NewNode[T interface{}](d T) *Node[T] {
+	return {
+		Edges: []Edge[T]{},
+		Data: d,
+	}
+}
+
+func (n *Node[T]) AddEdge(w int, d *Node[T], symmetric bool) {
+	n.Edges = append(n.Edges, Edge[T]{Weight: w, Destination: d})
+	if symmetric {
+		d.AddEdge(w, n, false)
+	}
+}
+
+func (n *Node[T]) BFS() []*Node[T] {
+	visited := make(map[*Node[T]]bool)
+	var unvisited []*Node[T]
+	unvisited = append(unvisited, n)
+
+	var ret []*Node[T]
+	for len(unvisited) > 0 {
+		c := unvisited[0]
+		unvisited = unvisited[1:]
+		visited[c] = true
+		ret = append(ret, c)
+		for _, e := range c.Edges {
+			m := e.Destination
+			if _, ok := visited[m]; !ok {
+				unvisited = append(unvisited, m)
+			}
+		}
+	}
+	return ret
+}
+
+func (n *Node[T]) DijkstraShortestPath(d *Node[T]) ([]*Node[T], int) {
+	distance := make(map[*Node[T]]int)
+	distance[n] = 0
+
+	pred := make(map[*Node[T]]*Node[T])
+	queue := lane.NewMinPriorityQueue[*Node[T], int]()
+	for _, m := range n.BFS() {
+		if m != n {
+			distance[m] = math.MaxInt
+			pred[m] = nil
+		}
+		queue.Push(m, distance[m])
+	}
+
+	for queue.Size() > 0 {
+		m, p, _ := queue.Pop()
+		if p != distance[m] {
+			continue
+		}
+		for _, e := range m.Edges {
+			o := e.Destination
+			alt := distance[m] + e.Weight
+			if alt < distance[o] {
+				distance[o] = alt
+				pred[o] = m
+				queue.Push(o, distance[o])
+			}
+		}
+	}
+
+	pathCost := distance[d]
+	path := []*Node[T]{d}
+	c := d
+	for c != n {
+		m := pred[c]
+		path = append(path, m)
+	}
+	return path, pathCost
+}
 
 type GridCell interface {
 	Row() int
 	Col() int
 }
+type Vector struct {
+	DeltaR, DeltaC int
+}
+
+func (v Vector) String() string {
+	return fmt.Sprintf("<%v,%v>", v.DeltaR, v.DeltaC)
+}
 
 type Grid[T GridCell] [][]T
+type GridIterator[T GridCell] struct {
+	Row, Col int
+	Grid     *Grid[T]
+}
 
-func (g *Grid[T]) Cell(row, col int) T {
-	return (*g)[row-1][col-1]
+func (g *GridIterator[T]) Next() *T {
+	g.Col++
+	if g.Col > g.Grid.ColLen() {
+		g.Col = 1
+		g.Row++
+	}
+	if g.Row > g.Grid.RowLen() {
+		return nil
+	}
+	ret := g.Grid.Cell(g.Row, g.Col)
+	return ret
+}
+
+func (g *Grid[T]) NewIterator() GridIterator[T] {
+	return GridIterator[T]{1, 0, g}
+}
+
+func (g *Grid[T]) Cell(row, col int) *T {
+	return &(*g)[row-1][col-1]
 }
 
 func (g *Grid[T]) RowLen() int {
@@ -28,8 +145,8 @@ func (g *Grid[T]) ColLen() int {
 	return len((*g)[0])
 }
 
-func GridNeighbors[T GridCell](g *Grid[T], cell T, diagonals bool) []T {
-	var neighbors []T
+func GridNeighbors[T GridCell](g *Grid[T], cell T, diagonals bool) []*T {
+	var neighbors []*T
 	r := cell.Row()
 	c := cell.Col()
 	if diagonals && r > 1 && c > 1 {
