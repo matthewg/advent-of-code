@@ -24,9 +24,9 @@ type Edge[T interface{}] struct {
 }
 
 func NewNode[T interface{}](d T) *Node[T] {
-	return {
+	return &Node[T]{
 		Edges: []Edge[T]{},
-		Data: d,
+		Data:  d,
 	}
 }
 
@@ -43,7 +43,9 @@ func (n *Node[T]) BFS() []*Node[T] {
 	unvisited = append(unvisited, n)
 
 	var ret []*Node[T]
+	//fmt.Printf("Running BFS...\n")
 	for len(unvisited) > 0 {
+		//fmt.Printf("Unvisited len: %v\n", len(unvisited))
 		c := unvisited[0]
 		unvisited = unvisited[1:]
 		visited[c] = true
@@ -52,16 +54,18 @@ func (n *Node[T]) BFS() []*Node[T] {
 			m := e.Destination
 			if _, ok := visited[m]; !ok {
 				unvisited = append(unvisited, m)
+				visited[m] = true
 			}
 		}
 	}
 	return ret
 }
 
-func (n *Node[T]) DijkstraShortestPath(d *Node[T]) ([]*Node[T], int) {
+func (n *Node[T]) DijkstraShortestPath(d *Node[T]) int {
 	distance := make(map[*Node[T]]int)
 	distance[n] = 0
 
+	//fmt.Printf("Running Dijkstra...")
 	pred := make(map[*Node[T]]*Node[T])
 	queue := lane.NewMinPriorityQueue[*Node[T], int]()
 	for _, m := range n.BFS() {
@@ -71,8 +75,10 @@ func (n *Node[T]) DijkstraShortestPath(d *Node[T]) ([]*Node[T], int) {
 		}
 		queue.Push(m, distance[m])
 	}
+	//fmt.Printf("Assembled queue: %v\n", queue)
 
 	for queue.Size() > 0 {
+		//fmt.Printf("iter, qsize %v\n", queue.Size())
 		m, p, _ := queue.Pop()
 		if p != distance[m] {
 			continue
@@ -87,15 +93,21 @@ func (n *Node[T]) DijkstraShortestPath(d *Node[T]) ([]*Node[T], int) {
 			}
 		}
 	}
+	//fmt.Printf("iter done\n")
 
 	pathCost := distance[d]
-	path := []*Node[T]{d}
-	c := d
-	for c != n {
-		m := pred[c]
-		path = append(path, m)
-	}
-	return path, pathCost
+	/*
+		path := []*Node[T]{d}
+		c := d
+		for c != n {
+			fmt.Printf("Current node: %v\n")
+			m := pred[c]
+			path = append(path, m)
+			c = m
+		}
+	*/
+	//fmt.Printf("Done\n")
+	return pathCost
 }
 
 type GridCell interface {
