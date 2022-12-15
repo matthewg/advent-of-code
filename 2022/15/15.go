@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 
 	"github.com/matthewg/advent-of-code/golang/aocutils"
@@ -48,64 +47,44 @@ func ParseReading(s string) Reading {
 	}
 }
 
+func NoBeaconSpots(readings []Reading, y int) map[Pos]bool {
+	spots := make(map[Pos]bool)
+	for _, r := range readings {
+		checkXMin := r.Sensor.X - r.Distance
+		checkXMax := r.Sensor.X + r.Distance
+		for x := checkXMin; x <= checkXMax; x++ {
+			p := Pos{X: x, Y: y}
+			if Manhattan(p, r.Sensor) > r.Distance || r.Beacon == p {
+				continue
+			}
+			spots[p] = true
+		}
+	}
+	return spots
+}
+
 func main() {
-	readings := aocutils.Lines(os.Args[1], ParseReading)
+	fmt.Printf("== Example ==\n")
+	readings := aocutils.Lines("example.txt", ParseReading)
+	spots := NoBeaconSpots(readings, 10)
+	fmt.Printf("At row %v, spots with confirmed no beacon: %v\n", 10, len(spots))
 
-	// Part 1
-	spots := map[int]map[Pos]bool{
-		10: make(map[Pos]bool),
-		//2000000: make(map[Pos]bool),
-	}
-	for _, r := range readings {
-		for checkRow := range spots {
-			checkXMin := r.Sensor.X - r.Distance
-			checkXMax := r.Sensor.X + r.Distance
-			for x := checkXMin; x <= checkXMax; x++ {
-				p := Pos{X: x, Y: checkRow}
-				if Manhattan(p, r.Sensor) > r.Distance || r.Beacon == p {
-					continue
-				}
-				spots[checkRow][p] = true
-			}
-		}
-	}
-	for k, v := range spots {
-		fmt.Printf("At row %v, spots with confirmed no beacon: %v\n", k, len(v))
-	}
-
-	// Part 2
-	for _, r := range readings {
-		for checkRow := 0; checkRow <= 20; checkRow++ {
-			ss := make(map[Pos]bool)
-			// numTrue := 0
-
-			checkXMin := r.Sensor.X - r.Distance
-			checkXMax := r.Sensor.X + r.Distance
-			for x := aocutils.Max(checkXMin, 0); x <= aocutils.Min(checkXMax, 20); x++ {
-				p := Pos{X: x, Y: checkRow}
-				if Manhattan(p, r.Sensor) <= r.Distance || r.Beacon == p || r.Sensor == p {
-					ss[p] = false
-					//} else if _, ok := ss[p]; !ok {
-					//	ss[p] = true
+	for checkRow := 0; checkRow <= 20; checkRow++ {
+		spots = NoBeaconSpots(readings, checkRow)
+		fmt.Printf("At row %v, spots with confirmed no beacon: %v\n", checkRow, len(spots))
+		/*
+			rangeSpots := make(map[Pos]bool)
+			for p := range spots {
+				if p.X >= 0 && p.X <= 20 {
+					rangeSpots[p] = true
 				}
 			}
-			/*
-				if numTrue == len(ss) {
-					continue
+			if len(rangeSpots) == 1 {
+				for p := range rangeSpots {
+					t := p.X*4000000 + p.Y
+					fmt.Printf("Coord %v has tuning frequency %v\n", p, t)
 				}
-			*/
-			fmt.Printf("\n== Row %v ==\n", checkRow)
-			for k, v := range ss {
-				fmt.Printf("- %v: %v\n", k, v)
-				if v {
-					continue
-				}
-				/*
-					t := k.X*4000000 + k.Y
-					fmt.Printf("Coord %v has tuning frequency %v\n", k, t)
-					return
-				*/
 			}
-		}
+		*/
 	}
 }
