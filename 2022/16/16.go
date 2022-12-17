@@ -11,6 +11,7 @@
 //
 // Something like ~1152921504606846976 possible paths... need to be clever about pruning.
 // Maybe something like 'do not backtrack unless you have opened a valve'!
+// Good start, need to get more clever...
 
 package main
 
@@ -82,14 +83,20 @@ func DLS(start *Valve, valveMap *map[string]*Valve, depthLimit int, valvesOpen m
 }
 
 var PathsExplored int = 0
+var Cache map[string]int = make(map[string]int)
 
 func Pressure(path []string, valveMap *map[string]*Valve) int {
+	cKey := strings.Join(path, ",")
+	pressure, ok := Cache[cKey]
+	if ok {
+		return pressure
+	}
 	PathsExplored++
 	if PathsExplored%1000 == 0 {
 		fmt.Printf("Explored paths: %v\n", PathsExplored)
 	}
 
-	pressure := 0
+	pressure = 0
 	gpm := 0
 	current := "AA"
 	//fmt.Printf("Calculating pressure of %v-path: %v\n", len(path), path)
@@ -103,6 +110,7 @@ func Pressure(path []string, valveMap *map[string]*Valve) int {
 			current = step
 		}
 	}
+	Cache[cKey] = pressure
 	return pressure
 }
 

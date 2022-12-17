@@ -10,5 +10,6 @@ with open('input.txt') as f:
     tunnels = g.group(3).split(', ')
     print('{} [label="{}\\n{}"];'.format(valve, valve, rate))
     for tunnel in tunnels:
-      print('{} -- {};'.format(valve, tunnel))
+      if valve < tunnel:
+        print('  {} -- {};'.format(valve, tunnel))
 print('}')
