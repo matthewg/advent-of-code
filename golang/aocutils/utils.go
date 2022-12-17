@@ -8,10 +8,43 @@ import (
 	"log"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/oleiade/lane/v2"
 )
+
+func Abs(i int) int {
+	if i < 0 {
+		return i * -1
+	} else {
+		return i
+	}
+}
+
+func Max(a, b int) int {
+	if a > b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func Min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func Atoi(s string) int {
+	ret, err := strconv.Atoi(s)
+	if err != nil {
+		log.Fatalf("Error converting string '%v': %v", s, err)
+	}
+	return ret
+}
 
 type Node[T interface{}] struct {
 	Edges []Edge[T]
