@@ -23,7 +23,11 @@ def call_for_records(fn, state):
             lines.append(line.replace('\n', ''))
 
 
-Cell = collections.namedtuple('Cell', ('row', 'col', 'value'))
+class Cell:
+    def __init__(self, row, col, value):
+        self.row = row
+        self.col = col
+        self.value = value
 
 
 class GridIter:
